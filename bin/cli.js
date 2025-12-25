@@ -14,6 +14,7 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import fs from 'fs';
 import { initCommand } from '../src/cli/commands/init.js';
 import { statusCommand } from '../src/cli/commands/status.js';
 import { wakeCommand } from '../src/cli/commands/wake.js';
@@ -30,7 +31,16 @@ program
   .description(
     chalk.cyan('🌅 CLI Tool for Multi-Developer Development Environment Wake & Status Management')
   )
-  .version('1.0.0')
+  .version(
+    (() => {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url)));
+        return pkg.version || '0.0.0';
+      } catch (e) {
+        return '0.0.0';
+      }
+    })()
+  )
   .usage(chalk.yellow('[command] [options]'));
 
 // ═══════════════════════════════════════════════════════════════
@@ -59,7 +69,7 @@ program
 program
   .command('status [service]')
   .description(chalk.green('Check status of all services or a specific service'))
-  .option('-e, --env <environment>', 'Environment (dev, staging, prod)', 'dev')
+  .option('-e, --env <environment>', 'Environment (dev, staging, prod)')
   .option('-f, --format <format>', 'Output format (table, json)', 'table')
   .action(statusCommand);
 
@@ -72,7 +82,7 @@ program
 program
   .command('wake [target]')
   .description(chalk.blue('Wake services on demand (all, <service>, or <group>)'))
-  .option('-e, --env <environment>', 'Environment (dev, staging, prod)', 'dev')
+  .option('-e, --env <environment>', 'Environment (dev, staging, prod)')
   .option('--no-wait', 'Don\'t wait for services to be ready')
   .option('--timeout <seconds>', 'Timeout for service readiness', '300')
   .action(wakeCommand);
@@ -85,7 +95,7 @@ program
 program
   .command('health [service]')
   .description(chalk.cyan('Check health status of services'))
-  .option('-e, --env <environment>', 'Environment (dev, staging, prod)', 'dev')
+  .option('-e, --env <environment>', 'Environment (dev, staging, prod)')
   .action(healthCommand);
 
 // ═══════════════════════════════════════════════════════════════

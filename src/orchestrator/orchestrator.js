@@ -283,16 +283,13 @@ export class Orchestrator {
       // ═══════════════════════════════════════════════════════════════
       // DETERMINE STATE FROM STATUS CODE
       // ═══════════════════════════════════════════════════════════════
-      let state = ServiceState.UNKNOWN;
-
-      if (response.status < 300) {
-        state = ServiceState.LIVE;  // Changed from READY
-      } else if (response.status === 503) {
-        state = ServiceState.DEAD;  // Changed from SLEEPING
-      } else if (response.status >= 500) {
+      // Consider any HTTP response (2xx/3xx/4xx/5xx) as evidence the
+      // service is responsive — treat as LIVE. Only mark FAILED for
+      // server errors (5xx). This follows "mark as woken when any
+      // response is received" behavior.
+      let state = ServiceState.LIVE;
+      if (response.status >= 500) {
         state = ServiceState.FAILED;
-      } else if (response.status >= 400) {
-        state = ServiceState.UNKNOWN;
       }
 
       this._logTimestamp(

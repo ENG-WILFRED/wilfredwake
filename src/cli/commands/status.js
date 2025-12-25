@@ -126,14 +126,14 @@ function _displayTableStatus(services, environment) {
     const lastWoken = service.lastWakeTime
       ? new Date(service.lastWakeTime).toLocaleString()
       : 'Never';
-
     const cells = [
       chalk.cyan(service.name.padEnd(20)),
       statusColor(service.status.toUpperCase().padEnd(20)),
       chalk.yellow(lastWoken.padEnd(20)),
-      chalk.gray(service.url.substring(0, 20).padEnd(20)),
+      chalk.gray((service.url || '').substring(0, 20).padEnd(20)),
     ];
     console.log(format.tableRow(cells));
+    console.log(''); // Extra spacing between rows for clarity
   });
 
   console.log(''); // Spacing
@@ -158,23 +158,16 @@ function _displaySummary(services) {
 
   const stats = {
     total: services.length,
-    ready: services.filter(s => s.status === 'ready').length,
-    sleeping: services.filter(s => s.status === 'sleeping').length,
+    live: services.filter(s => s.status === 'live').length,
+    dead: services.filter(s => s.status === 'dead').length,
     waking: services.filter(s => s.status === 'waking').length,
     failed: services.filter(s => s.status === 'failed').length,
+    unknown: services.filter(s => s.status === 'unknown').length,
   };
 
   console.log(chalk.magentaBright.bold('Summary'));
   console.log(
-    `  ${colors.status.ready('✓')} Ready: ${colors.status.ready(
-      stats.ready
-    )} | ${colors.status.sleeping('⚫')} Sleeping: ${colors.status.sleeping(
-      stats.sleeping
-    )} | ${colors.status.waking('⟳')} Waking: ${colors.status.waking(
-      stats.waking
-    )} | ${colors.status.failed('✗')} Failed: ${colors.status.failed(
-      stats.failed
-    )}`
+    `  ${colors.status.live('✓')} Live: ${colors.status.live(stats.live)} | ${colors.status.dead('⚫')} Dead: ${colors.status.dead(stats.dead)} | ${colors.status.waking('⟳')} Waking: ${colors.status.waking(stats.waking)} | ${colors.status.failed('✗')} Failed: ${colors.status.failed(stats.failed)} | ${colors.status.unknown('?')} Unknown: ${colors.status.unknown(stats.unknown)}`
   );
   console.log(`  Total: ${stats.total} services\n`);
 }
