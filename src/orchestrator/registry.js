@@ -85,7 +85,8 @@ export class ServiceRegistry {
    */
   getServices(environment = 'dev') {
     const env = this.registry?.services?.[environment] || {};
-    return Object.values(env);
+    // Return service objects augmented with their name for downstream code
+    return Object.entries(env).map(([name, svc]) => ({ name, ...svc }));
   }
 
   /**
@@ -95,7 +96,9 @@ export class ServiceRegistry {
    * @returns {Object|null} Service definition
    */
   getService(serviceName, environment = 'dev') {
-    return this.registry?.services?.[environment]?.[serviceName] || null;
+    const svc = this.registry?.services?.[environment]?.[serviceName] || null;
+    if (!svc) return null;
+    return { name: serviceName, ...svc };
   }
 
   /**
@@ -125,8 +128,8 @@ export class ServiceRegistry {
     // RESOLVE TARGET SERVICES
     // ═══════════════════════════════════════════════════════════════
     if (target === 'all') {
-      // Wake all services
-      targetServices = Object.values(services);
+      // Wake all services (services is already an array of named objects)
+      targetServices = services;
     } else if (Array.isArray(target)) {
       // Wake specified services
       targetServices = target
