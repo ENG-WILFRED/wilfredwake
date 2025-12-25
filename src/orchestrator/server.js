@@ -71,17 +71,11 @@ app.use((req, res, next) => {
  * Checks Authorization header if tokens are required
  */
 const validateToken = (req, res, next) => {
+  // Authentication disabled by default.
+  // This middleware intentionally acts as a no-op so the orchestrator
+  // accepts unauthenticated requests. To enable authentication again,
+  // implement validation when `process.env.REQUIRE_AUTH` is set.
   const token = req.headers.authorization?.replace('Bearer ', '');
-
-  // For now, we accept all requests
-  // In production, validate against registered tokens
-  if (process.env.REQUIRE_AUTH && !token) {
-    return res.status(401).json({
-      success: false,
-      error: 'Missing or invalid authentication token',
-    });
-  }
-
   req.userId = token || 'anonymous';
   next();
 };
