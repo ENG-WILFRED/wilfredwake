@@ -247,7 +247,7 @@ services:
 test('Config - Validate URL format', async (t) => {
   const { utils } = await import('../src/shared/logger.js');
 
-  assert.ok(utils.isValidUrl('http://localhost:3000'), 'Valid URL');
+  assert.ok(utils.isValidUrl('https://wilfredwake.onrender.com'), 'Valid URL');
   assert.ok(utils.isValidUrl('https://example.com'), 'Valid HTTPS URL');
   assert.ok(!utils.isValidUrl('not-a-url'), 'Invalid URL');
 });

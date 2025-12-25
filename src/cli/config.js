@@ -27,8 +27,8 @@ export class ConfigManager {
     // DEFAULT CONFIGURATION
     // ═══════════════════════════════════════════════════════════════
     this.defaultConfig = {
-      version: '1.0.0',
-      orchestratorUrl: 'http://localhost:3000',
+    version: '1.0.0',
+    orchestratorUrl: 'https://wilfredwake.onrender.com',
       token: null,
       environment: 'dev',
       userId: this._generateUserId(),
@@ -43,15 +43,15 @@ export class ConfigManager {
       environments: {
         dev: {
           name: 'Development',
-          orchestratorUrl: 'http://localhost:3000',
+          orchestratorUrl: 'https://wilfredwake.onrender.com',
         },
         staging: {
           name: 'Staging',
-          orchestratorUrl: 'http://staging-orchestrator:3000',
+          orchestratorUrl: 'https://wilfredwake.onrender.com',
         },
         prod: {
           name: 'Production',
-          orchestratorUrl: 'http://prod-orchestrator:3000',
+          orchestratorUrl: 'https://wilfredwake.onrender.com',
         },
       },
       lastSyncTime: null,

@@ -99,7 +99,7 @@
  *
  * Default values:
  * {
- *   "orchestratorUrl": "http://localhost:3000",
+ *   "orchestratorUrl": "https://wilfredwake.onrender.com",
  *   "token": null,
  *   "environment": "dev",
  *   "preferences": {

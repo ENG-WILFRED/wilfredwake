@@ -47,7 +47,7 @@ program
   .description(
     chalk.magenta('Initialize wilfredwake configuration (first-time setup)')
   )
-  .option('-o, --orchestrator <url>', 'Orchestrator URL', 'http://localhost:3000')
+  .option('-o, --orchestrator <url>', 'Orchestrator URL', 'https://wilfredwake.onrender.com')
   .option('-t, --token <token>', 'Developer API token')
   .action(initCommand);
 

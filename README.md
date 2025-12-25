@@ -41,7 +41,7 @@
 # Run setup wizard
 wilfredwake init
 
-# Provide orchestrator URL (default: http://localhost:3000)
+# Provide orchestrator URL (default: https://wilfredwake.onrender.com)
 # Select environment (dev, staging, prod)
 # Optionally provide API token
 ```
@@ -185,7 +185,7 @@ This creates `~/.wilfredwake/config.json` with:
 
 ```json
 {
-  "orchestratorUrl": "http://localhost:3000",
+  "orchestratorUrl": "https://wilfredwake.onrender.com",
   "token": "your-api-token",
   "environment": "dev",
   "preferences": {
@@ -203,7 +203,7 @@ This creates `~/.wilfredwake/config.json` with:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `orchestratorUrl` | string | `http://localhost:3000` | Orchestrator backend URL |
+| `orchestratorUrl` | string | `https://wilfredwake.onrender.com` | Orchestrator backend URL |
 | `token` | string | `null` | API token for authentication |
 | `environment` | string | `dev` | Default environment (dev, staging, prod) |
 | `preferences.outputFormat` | string | `table` | Output format (table or json) |
@@ -231,7 +231,7 @@ export REQUIRE_AUTH=true
 Initialize wilfredwake configuration.
 
 **Options:**
-- `-o, --orchestrator <url>` - Orchestrator URL (default: http://localhost:3000)
+- `-o, --orchestrator <url>` - Orchestrator URL (default: https://wilfredwake.onrender.com)
 - `-t, --token <token>` - Developer API token
 
 **Example:**
@@ -490,7 +490,7 @@ services:
 ```bash
 # Orchestrator reloads automatically (watch mode)
 # Or manually:
-curl -X POST http://localhost:3000/api/reload
+curl -X POST https://wilfredwake.onrender.com/api/reload
 ```
 
 3. **Use immediately**
@@ -686,7 +686,7 @@ $ wilfredwake wake all --no-wait
 **Problem:** CLI can't reach the orchestrator backend.
 
 **Solution:**
-1. Check orchestrator is running: `curl http://localhost:3000/health`
+1. Check orchestrator is running: `curl https://wilfredwake.onrender.com/health`
 2. Verify orchestrator URL in config: `cat ~/.wilfredwake/config.json`
 3. Check firewall/networking: Can you reach the URL?
 

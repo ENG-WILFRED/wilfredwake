@@ -143,9 +143,9 @@ async function _promptForConfig(options) {
       console.log('');
 
       orchestrator = await question(
-        `Orchestrator URL ${chalk.gray('(default: http://localhost:3000)')} `
+        `Orchestrator URL ${chalk.gray('(default: https://wilfredwake.onrender.com)')} `
       );
-      orchestrator = orchestrator || 'http://localhost:3000';
+      orchestrator = orchestrator || 'https://wilfredwake.onrender.com';
     }
 
     // Validate URL format

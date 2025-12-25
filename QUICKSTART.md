@@ -89,7 +89,7 @@ wilfredwake init
 ```
 
 Follow the prompts:
-- **Orchestrator URL**: `http://localhost:3000` (or your server)
+- **Orchestrator URL**: `https://wilfredwake.onrender.com` (or your server)
 - **Environment**: `dev` (default)
 - **API Token**: Optional
 
@@ -214,7 +214,7 @@ Edit service definitions in:
 nano src/config/services.yaml
 
 # After edit, reload:
-curl -X POST http://localhost:3000/api/reload
+curl -X POST https://wilfredwake.onrender.com/api/reload
 ```
 
 To add a new service, edit `services.yaml`:
@@ -243,7 +243,7 @@ wilfredwake wake my-service
 
 1. **Check orchestrator is running:**
    ```bash
-   curl http://localhost:3000/health
+  curl https://wilfredwake.onrender.com/health
    ```
 
 2. **Check configuration:**
@@ -367,7 +367,7 @@ wilfredwake health payment-consumer
 git pull
 
 # Reload service registry
-curl -X POST http://localhost:3000/api/reload
+curl -X POST https://wilfredwake.onrender.com/api/reload
 
 # Wake any new services
 wilfredwake wake all
