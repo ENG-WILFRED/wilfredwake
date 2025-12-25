@@ -1,0 +1,41 @@
+{
+  "name": "wilfredwake",
+  "version": "1.0.1",
+  "description": "CLI Tool for Multi-Developer Development Environment Wake & Status Management",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "wilfredwake": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "dev": "node --experimental-watch bin/cli.js",
+    "orchestrator": "node src/orchestrator/server.js",
+    "orchestrator:dev": "node --experimental-watch src/orchestrator/server.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "cli",
+    "service-management",
+    "orchestration",
+    "development",
+    "wake",
+    "status"
+  ],
+  "author": "Wilfred Wake",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "axios": "^1.6.0",
+    "js-yaml": "^4.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

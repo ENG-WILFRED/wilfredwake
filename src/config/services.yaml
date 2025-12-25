@@ -1,0 +1,57 @@
+# ╔═══════════════════════════════════════════════════════════════╗
+# ║              WILFREDWAKE SERVICE REGISTRY                     ║
+# ║    Define all services, environments, and dependencies        ║
+# ║    This is the single source of truth for service mgmt        ║
+# ╚═══════════════════════════════════════════════════════════════╝
+
+# WILFREDWAKE SERVICE REGISTRY (SIMPLIFIED)
+
+# Environment and version
+env: dev
+version: "1.0"
+
+# SERVICES DEFINITION (DEV, STAGING, PROD)
+# Uses YAML anchors to avoid duplication
+services:
+  dev:
+    &dev_services
+    # Core backend service
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
+      dependsOn: []
+      description: "pension backend Service"
+
+    # Frontend service
+    frontend:
+      url: https://transactions-k6gk.onrender.com
+      health: /health
+      dependsOn: []
+      description: "frontend Service"
+
+    # Payment gateway (producer)
+    payment-gateway:
+      url: https://payment-gateway-7eta.onrender.com
+      health: /health
+      dependsOn: []
+      description: "Payment Event Producer"
+
+    # Notification consumer (event processor)
+    notification-consumer:
+      url: https://notification-service-consumer.onrender.com
+      health: /
+      dependsOn: []
+      description: "Notification Event Consumer"
+
+    # Notification producer
+    notification-producer:
+      url: https://notification-service-producer.onrender.com
+      health: /health
+      dependsOn: []
+      description: "Notification Producer Service"
+
+  # Staging environment (same services as dev)
+  staging: *dev_services
+
+  # Production environment (same services as dev)
+  prod: *dev_services
