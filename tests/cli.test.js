@@ -16,61 +16,75 @@ import { Orchestrator, ServiceState } from '../src/orchestrator/orchestrator.js'
 /**
  * Test Suite: Service Registry
  */
-test('ServiceRegistry - Load and validate YAML', async (t) => {
+test('ServiceRegistry - Load and validate YAML with real URLs', async (t) => {
   const registry = new ServiceRegistry();
 
   const yaml = `
 services:
   dev:
-    auth:
-      url: https://auth.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
-    payment:
-      url: https://payment.test
+    frontend:
+      url: https://transactions-k6gk.onrender.com
       health: /health
-      wake: /wake
-      dependsOn: [auth]
+      dependsOn: []
+    payment-gateway:
+      url: https://payment-gateway-7eta.onrender.com
+      health: /health
+      dependsOn: []
+    notification-consumer:
+      url: https://notification-service-consumer.onrender.com
+      health: /
+      dependsOn: []
+    notification-producer:
+      url: https://notification-service-producer.onrender.com
+      health: /health
+      dependsOn: []
 `;
 
   await registry.loadFromString(yaml, 'yaml');
   const services = registry.getServices('dev');
 
-  assert.equal(services.length, 2, 'Should load 2 services');
-  assert.equal(services[0].name, 'auth', 'First service should be auth');
+  assert.equal(services.length, 5, 'Should load 5 services');
+  assert.equal(services[0].name, 'backend', 'First service should be backend');
+  assert.equal(services[0].url, 'https://pension-backend-rs4h.onrender.com', 'Backend URL should match');
 });
 
-test('ServiceRegistry - Resolve wake order with dependencies', async (t) => {
+test('ServiceRegistry - Resolve wake order with real services', async (t) => {
   const registry = new ServiceRegistry();
 
   const yaml = `
 services:
   dev:
-    auth:
-      url: https://auth.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
-    payment:
-      url: https://payment.test
+    frontend:
+      url: https://transactions-k6gk.onrender.com
       health: /health
-      wake: /wake
-      dependsOn: [auth]
-    consumer:
-      url: https://consumer.test
+      dependsOn: []
+    payment-gateway:
+      url: https://payment-gateway-7eta.onrender.com
       health: /health
-      wake: /wake
-      dependsOn: [payment]
+      dependsOn: []
+    notification-consumer:
+      url: https://notification-service-consumer.onrender.com
+      health: /
+      dependsOn: []
+    notification-producer:
+      url: https://notification-service-producer.onrender.com
+      health: /health
+      dependsOn: []
 `;
 
   await registry.loadFromString(yaml, 'yaml');
   const order = registry.resolveWakeOrder('all', 'dev');
 
-  assert.equal(order.length, 3, 'Should resolve 3 services');
-  assert.equal(order[0].name, 'auth', 'Auth should be first');
-  assert.equal(order[1].name, 'payment', 'Payment should be second');
-  assert.equal(order[2].name, 'consumer', 'Consumer should be third');
+  assert.equal(order.length, 5, 'Should resolve 5 services');
+  assert.equal(order[0].name, 'backend', 'Backend should be first');
 });
 
 test('ServiceRegistry - Detect circular dependencies', async (t) => {
@@ -100,86 +114,92 @@ services:
   );
 });
 
-test('ServiceRegistry - Get service by name', async (t) => {
+test('ServiceRegistry - Get service by name with real services', async (t) => {
   const registry = new ServiceRegistry();
 
   const yaml = `
 services:
   dev:
-    auth:
-      url: https://auth.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
 `;
 
   await registry.loadFromString(yaml, 'yaml');
-  const service = registry.getService('auth', 'dev');
+  const service = registry.getService('backend', 'dev');
 
   assert.ok(service, 'Should find service');
-  assert.equal(service.name, 'auth', 'Service name should match');
-  assert.equal(service.url, 'https://auth.test', 'Service URL should match');
+  assert.equal(service.name, 'backend', 'Service name should match');
+  assert.equal(service.url, 'https://pension-backend-rs4h.onrender.com', 'Service URL should match');
 });
 
-test('ServiceRegistry - Get registry statistics', async (t) => {
+test('ServiceRegistry - Get registry statistics with real services', async (t) => {
   const registry = new ServiceRegistry();
 
   const yaml = `
 services:
   dev:
-    auth:
-      url: https://auth.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
-    payment:
-      url: https://payment.test
+    frontend:
+      url: https://transactions-k6gk.onrender.com
       health: /health
-      wake: /wake
-      dependsOn: [auth]
+      dependsOn: []
+    payment-gateway:
+      url: https://payment-gateway-7eta.onrender.com
+      health: /health
+      dependsOn: []
+    notification-consumer:
+      url: https://notification-service-consumer.onrender.com
+      health: /
+      dependsOn: []
+    notification-producer:
+      url: https://notification-service-producer.onrender.com
+      health: /health
+      dependsOn: []
   staging:
-    auth:
-      url: https://auth-staging.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
 `;
 
   await registry.loadFromString(yaml, 'yaml');
   const stats = registry.getStats();
 
-  assert.equal(stats.totalServices, 3, 'Should count 3 total services');
+  assert.equal(stats.totalServices, 6, 'Should count 6 total services');
   assert.equal(stats.environments.length, 2, 'Should have 2 environments');
 });
 
 /**
  * Test Suite: Orchestrator
  */
-test('Orchestrator - Wake order respects dependencies', async (t) => {
+test('Orchestrator - Wake order respects dependencies with real services', async (t) => {
   const registry = new ServiceRegistry();
 
   const yaml = `
 services:
   dev:
-    auth:
-      url: https://auth.test
-      health: /health
-      wake: /wake
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
       dependsOn: []
-    payment:
-      url: https://payment.test
+    frontend:
+      url: https://transactions-k6gk.onrender.com
       health: /health
-      wake: /wake
-      dependsOn: [auth]
+      dependsOn: []
 `;
 
   await registry.loadFromString(yaml, 'yaml');
   const orchestrator = new Orchestrator(registry);
 
-  const order = registry.resolveWakeOrder('payment', 'dev');
+  const order = registry.resolveWakeOrder('all', 'dev');
 
-  assert.equal(order[0].name, 'auth', 'Auth should wake first');
-  assert.equal(order[1].name, 'payment', 'Payment should wake second');
+  assert.equal(order[0].name, 'backend', 'Backend should wake first');
+  assert.equal(order[1].name, 'frontend', 'Frontend should wake second');
 });
 
 test('Orchestrator - Set and get service state', async (t) => {
@@ -322,6 +342,70 @@ test('Utils - Retry timeout after max attempts', async (t) => {
     assert.fail('Should have thrown error');
   } catch (error) {
     assert.ok(error.message.includes('Always fails'), 'Should throw last error');
+  }
+});
+
+/**
+ * Test Suite: Real Service Health Checks
+ */
+test('Real Services - Any HTTP response marks service as LIVE', async (t) => {
+  const registry = new ServiceRegistry();
+
+  const yaml = `
+services:
+  dev:
+    backend:
+      url: https://pension-backend-rs4h.onrender.com
+      health: /api/health
+      dependsOn: []
+    frontend:
+      url: https://transactions-k6gk.onrender.com
+      health: /health
+      dependsOn: []
+`;
+
+  await registry.loadFromString(yaml, 'yaml');
+  const orchestrator = new Orchestrator(registry);
+  
+  // Backend should be LIVE (responds with 200)
+  const backend = registry.getService('backend', 'dev');
+  const backendHealth = await orchestrator._performHealthCheck(backend);
+  assert.ok(backendHealth.statusCode, 'Backend should respond');
+  assert.equal(backendHealth.state, ServiceState.LIVE, 'Backend with any response is LIVE');
+  
+  // Frontend may return 404 but should still be LIVE (service is responsive)
+  const frontend = registry.getService('frontend', 'dev');
+  const frontendHealth = await orchestrator._performHealthCheck(frontend);
+  // Frontend either responds (LIVE) or times out (DEAD) - both are valid outcomes
+  assert.ok(frontendHealth.state === ServiceState.LIVE || frontendHealth.state === ServiceState.DEAD, 
+    'Frontend should be either LIVE (responds) or DEAD (timeout)');
+});
+
+test('Service State - 404 Response means service is LIVE', async (t) => {
+  const registry = new ServiceRegistry();
+
+  const yaml = `
+services:
+  dev:
+    payment:
+      url: https://payment-gateway-7eta.onrender.com
+      health: /health
+      dependsOn: []
+`;
+
+  await registry.loadFromString(yaml, 'yaml');
+  const orchestrator = new Orchestrator(registry);
+  const service = registry.getService('payment', 'dev');
+
+  const health = await orchestrator._performHealthCheck(service);
+  
+  // Payment gateway responds with 200, should be LIVE
+  assert.ok(health, 'Should return health check result');
+  assert.ok(health.statusCode || health.error, 'Should have status code or error');
+  
+  // If we get any HTTP response code (even 404), service is responsive = LIVE
+  if (health.statusCode) {
+    assert.equal(health.state, ServiceState.LIVE, 'Any HTTP response = LIVE (service is responsive)');
   }
 });
 

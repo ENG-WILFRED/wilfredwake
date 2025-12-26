@@ -261,6 +261,15 @@ export class Orchestrator {
    * Perform health check on service
    * NEW: Simple /health endpoint call with timeout tracking
    *
+   * LOGIC:
+   * - Any HTTP response (200, 404, 500, etc) = Service is LIVE/responsive
+   * - No response / Timeout = Service is DEAD (needs waking)
+   *
+   * Example:
+   * - Backend returns 200 OK → LIVE ✓
+   * - Frontend returns 404 Not Found → LIVE ✓ (service is responsive)
+   * - Notification service times out → DEAD (no response, needs waking)
+   *
    * @private
    * @param {Object} service - Service definition
    * @returns {Promise<Object>} Health check result
@@ -275,25 +284,27 @@ export class Orchestrator {
 
       const response = await axios.get(healthUrl, {
         timeout: 10000,
-        validateStatus: () => true,
+        validateStatus: () => true,  // Don't throw on any status code
       });
 
       const responseTime = Date.now() - startTime;
 
       // ═══════════════════════════════════════════════════════════════
-      // DETERMINE STATE FROM STATUS CODE
+      // DETERMINE STATE FROM RESPONSE
       // ═══════════════════════════════════════════════════════════════
-      // NEW LOGIC: If we get ANY response from the API (2xx, 3xx, 4xx, 5xx),
-      // mark the service as LIVE. This means the service is responsive.
-      // Only mark as FAILED if no response is received at all.
+      // If we get ANY HTTP response (2xx, 3xx, 4xx, 5xx), the service
+      // is responsive and should be marked LIVE. This means:
+      // - 200 OK = service fully operational
+      // - 404 Not Found = service is up but endpoint doesn't exist
+      // - 500 Server Error = service is up but has an error
+      // All of these are better than no response at all.
+      //
+      // Only mark DEAD if we get no response (timeout, ECONNREFUSED, etc)
       let state = ServiceState.LIVE;
-      
-      // If we got a response, the service is responsive = LIVE
-      // No need to check status code, any response means service can be reached
 
       this._logTimestamp(
         service.name,
-        `Responded ${response.status} in ${responseTime}ms`
+        `Responded ${response.status} in ${responseTime}ms (LIVE - service is responsive)`
       );
 
       return {
@@ -308,11 +319,11 @@ export class Orchestrator {
 
       this._logTimestamp(
         service.name,
-        `Health check failed: ${error.message}`
+        `Health check failed: ${error.message} (DEAD - no response, needs waking)`
       );
 
       return {
-        state: ServiceState.DEAD,  // Only dead if no response received
+        state: ServiceState.DEAD,  // No response received = service needs waking
         statusCode: null,
         responseTime,
         error: error.message,
