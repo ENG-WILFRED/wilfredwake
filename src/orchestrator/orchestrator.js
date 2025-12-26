@@ -283,14 +283,13 @@ export class Orchestrator {
       // ═══════════════════════════════════════════════════════════════
       // DETERMINE STATE FROM STATUS CODE
       // ═══════════════════════════════════════════════════════════════
-      // Consider any HTTP response (2xx/3xx/4xx/5xx) as evidence the
-      // service is responsive — treat as LIVE. Only mark FAILED for
-      // server errors (5xx). This follows "mark as woken when any
-      // response is received" behavior.
+      // NEW LOGIC: If we get ANY response from the API (2xx, 3xx, 4xx, 5xx),
+      // mark the service as LIVE. This means the service is responsive.
+      // Only mark as FAILED if no response is received at all.
       let state = ServiceState.LIVE;
-      if (response.status >= 500) {
-        state = ServiceState.FAILED;
-      }
+      
+      // If we got a response, the service is responsive = LIVE
+      // No need to check status code, any response means service can be reached
 
       this._logTimestamp(
         service.name,
@@ -313,7 +312,7 @@ export class Orchestrator {
       );
 
       return {
-        state: ServiceState.DEAD,  // Changed: assume dead on error
+        state: ServiceState.DEAD,  // Only dead if no response received
         statusCode: null,
         responseTime,
         error: error.message,

@@ -82,13 +82,22 @@ export async function wakeCommand(target, options) {
       _displayWakeResults(results);
 
       // ═══════════════════════════════════════════════════════════════
-      // DISPLAY FINAL STATUS
+      // DISPLAY FINAL STATUS AND START MONITORING
       // ═══════════════════════════════════════════════════════════════
       if (shouldWait) {
         _displayFinalStatus(results);
+        
+        // Start 5-minute monitoring period
+        await _monitorServicesForDuration(
+          config.orchestratorUrl,
+          config.token,
+          env,
+          wakeTarget,
+          5 * 60 * 1000 // 5 minutes in milliseconds
+        );
       }
 
-      process.exit(results.success ? 0 : 1);
+      process.exit(0);
     } catch (error) {
       stopSpinner?.();
       throw error;
@@ -179,4 +188,168 @@ function _displayFinalStatus(results) {
   }
 
   console.log('');
+}
+
+/**
+ * Monitor services for a duration and display live status updates
+ * @private
+ * @param {string} orchestratorUrl - Orchestrator URL
+ * @param {string} token - Authorization token
+ * @param {string} env - Environment name
+ * @param {string} wakeTarget - Wake target (all, <service>, or <group>)
+ * @param {number} duration - Duration in milliseconds
+ */
+async function _monitorServicesForDuration(
+  orchestratorUrl,
+  token,
+  env,
+  wakeTarget,
+  duration
+) {
+  const pollInterval = 10000; // Poll every 10 seconds
+  const startTime = Date.now();
+  const endTime = startTime + duration;
+  let pollCount = 0;
+
+  console.log(
+    chalk.magentaBright.bold(
+      `📡 Monitoring services for ${Math.round(duration / 1000)}s...\n`
+    )
+  );
+
+  while (Date.now() < endTime) {
+    pollCount++;
+    const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
+    
+    try {
+      // Fetch current status from orchestrator
+      const response = await axios.get(
+        `${orchestratorUrl}/api/status`,
+        {
+          params: {
+            environment: env,
+          },
+          timeout: 5000,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined,
+          },
+        }
+      );
+
+      const services = response.data.services || [];
+
+      // Clear screen and display updated status
+      console.clear();
+      console.log(chalk.cyanBright.bold('📡 Live Service Monitoring\n'));
+      console.log(
+        chalk.gray(`Elapsed: ${chalk.yellow(elapsedSeconds)}s / ${Math.round(duration / 1000)}s | Poll #${pollCount}\n`)
+      );
+
+      // Display table with current status
+      _displayLiveMonitoringTable(services, env);
+
+      // Display summary stats
+      _displayLiveMonitoringSummary(services);
+    } catch (error) {
+      console.clear();
+      console.log(chalk.cyanBright.bold('📡 Live Service Monitoring\n'));
+      console.log(
+        chalk.gray(`Elapsed: ${chalk.yellow(elapsedSeconds)}s / ${Math.round(duration / 1000)}s | Poll #${pollCount}\n`)
+      );
+      logger.warn(`Status check failed: ${error.message}`);
+    }
+
+    // Wait before next poll (unless we're at the end)
+    if (Date.now() < endTime) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+  }
+
+  // Final summary
+  console.clear();
+  console.log(chalk.cyanBright.bold('📡 Monitoring Complete\n'));
+  console.log(chalk.yellow(`Total monitoring duration: ${Math.round(duration / 1000)}s\n`));
+
+  try {
+    // Fetch final status
+    const response = await axios.get(
+      `${orchestratorUrl}/api/status`,
+      {
+        params: {
+          environment: env,
+        },
+        timeout: 5000,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
+      }
+    );
+
+    const services = response.data.services || [];
+    _displayLiveMonitoringTable(services, env);
+    _displayLiveMonitoringSummary(services);
+  } catch (error) {
+    logger.warn(`Could not fetch final status: ${error.message}`);
+  }
+
+  console.log('');
+}
+
+/**
+ * Display live monitoring status table
+ * @private
+ * @param {Array} services - Services array
+ * @param {string} environment - Environment name
+ */
+function _displayLiveMonitoringTable(services, environment) {
+  if (services.length === 0) {
+    logger.info('No services to display.');
+    return;
+  }
+
+  console.log(chalk.cyanBright.bold(`Services (${environment.toUpperCase()})\n`));
+
+  const headers = ['Service', 'Status', 'Last Woken', 'URL'];
+  console.log(format.tableHeader(headers));
+
+  services.forEach((service) => {
+    const statusColor = colors.status[service.status] || colors.status.unknown;
+    const lastWoken = service.lastWakeTime
+      ? new Date(service.lastWakeTime).toLocaleString()
+      : 'Never';
+    const cells = [
+      chalk.cyan(service.name.padEnd(20)),
+      statusColor(service.status.toUpperCase().padEnd(20)),
+      chalk.yellow(lastWoken.padEnd(20)),
+      chalk.gray((service.url || '').substring(0, 20).padEnd(20)),
+    ];
+    console.log(format.tableRow(cells));
+    console.log('');
+  });
+
+  console.log('');
+}
+
+/**
+ * Display live monitoring summary stats
+ * @private
+ * @param {Array} services - Services array
+ */
+function _displayLiveMonitoringSummary(services) {
+  if (services.length === 0) return;
+
+  const stats = {
+    total: services.length,
+    live: services.filter(s => s.status === 'live').length,
+    dead: services.filter(s => s.status === 'dead').length,
+    waking: services.filter(s => s.status === 'waking').length,
+    failed: services.filter(s => s.status === 'failed').length,
+    unknown: services.filter(s => s.status === 'unknown').length,
+  };
+
+  console.log(chalk.magentaBright.bold('Summary'));
+  console.log(
+    `  ${colors.status.live('✓')} Live: ${colors.status.live(stats.live)} | ${colors.status.dead('⚫')} Dead: ${colors.status.dead(stats.dead)} | ${colors.status.waking('⟳')} Waking: ${colors.status.waking(stats.waking)} | ${colors.status.failed('✗')} Failed: ${colors.status.failed(stats.failed)} | ${colors.status.unknown('?')} Unknown: ${colors.status.unknown(stats.unknown)}`
+  );
+  console.log(`  Total: ${stats.total} services\n`);
 }
