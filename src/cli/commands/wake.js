@@ -229,7 +229,7 @@ async function _monitorServicesForDuration(
           params: {
             environment: env,
           },
-          timeout: 5000,
+            timeout: 15000,
           headers: {
             Authorization: token ? `Bearer ${token}` : undefined,
           },
@@ -278,7 +278,7 @@ async function _monitorServicesForDuration(
         params: {
           environment: env,
         },
-        timeout: 5000,
+          timeout: 15000,
         headers: {
           Authorization: token ? `Bearer ${token}` : undefined,
         },
@@ -319,9 +319,9 @@ function _displayLiveMonitoringTable(services, environment) {
       : 'Never';
     const cells = [
       chalk.cyan(service.name.padEnd(20)),
-      statusColor(service.status.toUpperCase().padEnd(20)),
+      statusColor(String(service.status).toUpperCase().padEnd(20)),
       chalk.yellow(lastWoken.padEnd(20)),
-      chalk.gray((service.url || '').substring(0, 20).padEnd(20)),
+      chalk.gray((service.url || '').padEnd(60)),
     ];
     console.log(format.tableRow(cells));
     console.log('');

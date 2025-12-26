@@ -148,13 +148,27 @@ export class Orchestrator {
 
     const statusResults = [];
 
+    // Use a more detailed health check here so we can return statusCode
+    // and make a clear decision: any HTTP response = LIVE, no response = DEAD
     for (const service of services) {
-      const status = await this._checkHealthWithTimeout(service, 5); // Quick check
-      
+      const health = await this._performHealthCheck(service);
+
+      // Determine the outward-facing status
+      let status = ServiceState.UNKNOWN;
+      if (health && typeof health.statusCode === 'number') {
+        status = ServiceState.LIVE; // any HTTP response indicates the service is responsive
+      } else if (health && health.state === ServiceState.DEAD) {
+        status = ServiceState.DEAD;
+      } else if (health && health.state) {
+        status = health.state;
+      }
+
       statusResults.push({
         name: service.name,
         status,
         url: service.url,
+        statusCode: health.statusCode || null,
+        responseTime: health.responseTime || null,
         lastWakeTime: this.lastWakeTime.get(service.name) || null,
       });
     }

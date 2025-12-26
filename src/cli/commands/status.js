@@ -53,7 +53,7 @@ export async function statusCommand(service, options) {
             environment: env,
             service: serviceFilter !== 'all' ? serviceFilter : undefined,
           },
-          timeout: 10000,
+          timeout: 15000,
         }
       );
 
@@ -122,15 +122,16 @@ function _displayTableStatus(services, environment) {
   // TABLE ROWS
   // ═══════════════════════════════════════════════════════════════
   services.forEach((service) => {
-    const statusColor = colors.status[service.status] || colors.status.unknown;
+    const statusKey = String(service.status || '').toLowerCase();
+    const statusColor = colors.status[statusKey] || colors.status.unknown;
     const lastWoken = service.lastWakeTime
       ? new Date(service.lastWakeTime).toLocaleString()
       : 'Never';
     const cells = [
       chalk.cyan(service.name.padEnd(20)),
-      statusColor(service.status.toUpperCase().padEnd(20)),
+      statusColor(String(service.status).toUpperCase().padEnd(20)),
       chalk.yellow(lastWoken.padEnd(20)),
-      chalk.gray((service.url || '').substring(0, 20).padEnd(20)),
+      chalk.gray((service.url || '').padEnd(60)),
     ];
     console.log(format.tableRow(cells));
     console.log(''); // Extra spacing between rows for clarity
