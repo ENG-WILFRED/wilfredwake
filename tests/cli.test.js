@@ -38,10 +38,7 @@ services:
       url: https://notification-service-consumer.onrender.com
       health: /
       dependsOn: []
-    notification-producer:
-      url: https://notification-service-producer.onrender.com
-      health: /health
-      dependsOn: []
+
 `;
 
   await registry.loadFromString(yaml, 'yaml');
@@ -74,10 +71,7 @@ services:
       url: https://notification-service-consumer.onrender.com
       health: /
       dependsOn: []
-    notification-producer:
-      url: https://notification-service-producer.onrender.com
-      health: /health
-      dependsOn: []
+
 `;
 
   await registry.loadFromString(yaml, 'yaml');
@@ -155,10 +149,6 @@ services:
     notification-consumer:
       url: https://notification-service-consumer.onrender.com
       health: /
-      dependsOn: []
-    notification-producer:
-      url: https://notification-service-producer.onrender.com
-      health: /health
       dependsOn: []
   staging:
     backend:
