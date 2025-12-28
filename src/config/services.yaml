@@ -25,7 +25,11 @@ services:
     # Frontend service
     frontend:
       url: https://transactions-k6gk.onrender.com
-      health: /health
+      # Root page (/) — this is a browser page URL. Orchestrator will
+      # treat a failed HTTP request as LIVE if a TCP connection to the
+      # host:port succeeds (covers cases where the page doesn't return
+      # a standard HTTP status but the site is up).
+      health: /
       dependsOn: []
       description: "frontend Service"
 
@@ -42,13 +46,6 @@ services:
       health: /
       dependsOn: []
       description: "Notification Event Consumer"
-
-    # Notification producer
-    notification-producer:
-      url: https://notification-service-producer.onrender.com
-      health: /health
-      dependsOn: []
-      description: "Notification Producer Service"
 
   # Staging environment (same services as dev)
   staging: *dev_services

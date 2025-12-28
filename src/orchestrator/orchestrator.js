@@ -7,6 +7,7 @@
  */
 
 import axios from 'axios';
+import net from 'net';
 
 /**
  * Service state enumeration
@@ -74,29 +75,22 @@ export class Orchestrator {
     // ASSUME ALL SERVICES ARE DEAD INITIALLY
     // NEW: Instead of /wake endpoint, just check /health repeatedly
     // ═══════════════════════════════════════════════════════════════
-    const results = [];
+    const results = new Map();
+    const serviceStartTimes = new Map();
     const startTime = Date.now();
 
+    // Initialize state for each service and do an initial check
     for (const service of services) {
-      const serviceStartTime = Date.now();
+      this._logTimestamp(service.name, 'Wake initiated');
+      this._setServiceState(service.name, ServiceState.DEAD);
+      this._recordLastWakeTime(service.name);
+      serviceStartTimes.set(service.name, Date.now());
 
       try {
-        // NEW: Mark service as being woken and initiate health check sequence
-        this._logTimestamp(service.name, 'Wake initiated');
+        const status = await this._checkHealthWithTimeout(service, Math.min(timeout, 10));
+        const duration = Date.now() - serviceStartTimes.get(service.name);
 
-        // NEW: Set state to DEAD initially (always assume dead)
-        this._setServiceState(service.name, ServiceState.DEAD);
-        this._recordLastWakeTime(service.name);
-
-        // Check health status (handles timeout internally)
-        const status = await this._checkHealthWithTimeout(
-          service,
-          timeout
-        );
-
-        const duration = Date.now() - serviceStartTime;
-
-        results.push({
+        results.set(service.name, {
           name: service.name,
           status,
           url: service.url,
@@ -107,9 +101,8 @@ export class Orchestrator {
 
         this._setServiceState(service.name, status);
       } catch (error) {
-        const duration = Date.now() - serviceStartTime;
-
-        results.push({
+        const duration = Date.now() - serviceStartTimes.get(service.name);
+        results.set(service.name, {
           name: service.name,
           status: ServiceState.FAILED,
           url: service.url,
@@ -117,18 +110,92 @@ export class Orchestrator {
           error: error.message,
           lastWakeTime: this.lastWakeTime.get(service.name),
         });
-
         this._setServiceState(service.name, ServiceState.FAILED);
       }
     }
 
+    // If caller doesn't want to wait, return early with current statuses
+    const toArray = () => Array.from(results.values());
+    let allLive = toArray().every(r => r.status === ServiceState.LIVE);
+    if (!wait || allLive) {
+      const totalDuration = Date.now() - startTime;
+      return {
+        success: allLive,
+        error: null,
+        services: toArray(),
+        totalDuration,
+      };
+    }
+
+    // Otherwise, poll remaining services until all are LIVE or timeout
+    const deadline = Date.now() + timeout * 1000;
+
+    while (Date.now() < deadline) {
+      // Check remaining services concurrently
+      const checks = [];
+      for (const service of services) {
+        const current = results.get(service.name);
+        if (current.status === ServiceState.LIVE) continue;
+
+        checks.push((async () => {
+          const health = await this._performHealthCheck(service);
+          if (health && health.state === ServiceState.LIVE) {
+            const duration = Date.now() - serviceStartTimes.get(service.name);
+            results.set(service.name, {
+              name: service.name,
+              status: ServiceState.LIVE,
+              url: service.url,
+              duration,
+              error: null,
+              lastWakeTime: this.lastWakeTime.get(service.name),
+            });
+            this._setServiceState(service.name, ServiceState.LIVE);
+            this._logTimestamp(service.name, `Became LIVE after ${duration}ms`);
+          } else if (health && health.state === ServiceState.DEAD) {
+            // still dead, update responseTime as duration
+            results.set(service.name, Object.assign({}, results.get(service.name), {
+              status: ServiceState.DEAD,
+              duration: Date.now() - serviceStartTimes.get(service.name),
+              error: health.error || results.get(service.name).error,
+            }));
+          } else if (health && health.state) {
+            // other intermediate state (waking/failed)
+            results.set(service.name, Object.assign({}, results.get(service.name), {
+              status: health.state,
+              duration: Date.now() - serviceStartTimes.get(service.name),
+              error: health.error || null,
+            }));
+          }
+        })());
+      }
+
+      // Wait for this round
+      await Promise.all(checks);
+
+      // Display progress summary
+      const summary = {
+        total: services.length,
+        live: toArray().filter(s => s.status === ServiceState.LIVE).length,
+        waking: toArray().filter(s => s.status === ServiceState.WAKING).length,
+        dead: toArray().filter(s => s.status === ServiceState.DEAD).length,
+        failed: toArray().filter(s => s.status === ServiceState.FAILED).length,
+      };
+
+      this._logTimestamp('orchestrator', `Progress: ${summary.live}/${summary.total} live, ${summary.waking} waking, ${summary.dead} dead, ${summary.failed} failed`);
+
+      allLive = toArray().every(r => r.status === ServiceState.LIVE);
+      if (allLive) break;
+
+      // small delay before next round
+      await this._wait(1000);
+    }
+
     const totalDuration = Date.now() - startTime;
-    const allLive = results.every(r => r.status === ServiceState.LIVE);
 
     return {
-      success: allLive,
+      success: toArray().every(r => r.status === ServiceState.LIVE),
       error: null,
-      services: results,
+      services: toArray(),
       totalDuration,
     };
   }
@@ -161,6 +228,20 @@ export class Orchestrator {
         status = ServiceState.DEAD;
       } else if (health && health.state) {
         status = health.state;
+      }
+
+      // Special rule: frontend may return an empty body or non-standard response
+      // that doesn't set a numeric statusCode in some environments. Per user
+      // requirement, treat the `frontend` service as LIVE if it returned no
+      // explicit error (i.e. health exists and no DEAD state). This ensures
+      // "nothing returned" from frontend is interpreted as live.
+      if (
+        service.name === 'frontend' &&
+        health &&
+        (health.statusCode == null) &&
+        health.state !== ServiceState.DEAD
+      ) {
+        status = ServiceState.LIVE;
       }
 
       statusResults.push({
@@ -335,6 +416,55 @@ export class Orchestrator {
         service.name,
         `Health check failed: ${error.message} (DEAD - no response, needs waking)`
       );
+      // If this is a frontend/page-style service (health is '/'), a
+      // failed HTTP request can still mean the site is "live" if the
+      // host accepts TCP connections. Try a TCP connect to the host:port
+      // before marking it DEAD. This covers cases where the page itself
+      // doesn't return a normal HTTP status but the server is responsive
+      // (stops loading in a browser).
+      try {
+        if (service.health === '/' || service.health === '') {
+          const parsed = new URL(service.url);
+          const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
+          const host = parsed.hostname;
+
+          this._logTimestamp(service.name, `HTTP failed; attempting TCP connect to ${host}:${port}`);
+
+          const tcpStart = Date.now();
+          const tcpOk = await new Promise((resolve) => {
+            const socket = new net.Socket();
+            let settled = false;
+
+            const onCleanup = (ok) => {
+              if (settled) return;
+              settled = true;
+              try { socket.destroy(); } catch (e) {}
+              resolve(ok);
+            };
+
+            socket.setTimeout(3000);
+            socket.once('connect', () => onCleanup(true));
+            socket.once('timeout', () => onCleanup(false));
+            socket.once('error', () => onCleanup(false));
+            socket.connect(port, host);
+          });
+
+          const tcpResponseTime = Date.now() - tcpStart;
+
+          if (tcpOk) {
+            this._logTimestamp(service.name, `TCP connect succeeded in ${tcpResponseTime}ms - treating as LIVE`);
+            return {
+              state: ServiceState.LIVE,
+              statusCode: null,
+              responseTime: tcpResponseTime,
+              error: null,
+              uptime: null,
+            };
+          }
+        }
+      } catch (tcpErr) {
+        this._logTimestamp(service.name, `TCP fallback failed: ${tcpErr.message}`);
+      }
 
       return {
         state: ServiceState.DEAD,  // No response received = service needs waking

@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+.github
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+tests
+.test.js
+
+# Documentation
+README.md
+QUICKSTART.md
+SERVICE_STATUS_LOGIC.md
+LICENSE
+
+# Build artifacts
+dist
+build
+out
+
+# CI/CD
+.gitlab-ci.yml
+.circleci
+.github/workflows

@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  # CLI container - for running wilfredwake commands
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: wilfredwake-cli
+    image: wilfredwake:latest
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./src/config/services.yaml:/app/src/config/services.yaml
+      - ./.env:/app/.env
+    # Override to run specific commands
+    # command: node bin/cli.js status
+    # or: node bin/cli.js wake [service-name]
+    # or: node bin/cli.js health [service-name]
+    # or: node bin/cli.js init
+    profiles:
+      - cli
+
+  # Orchestrator server - for running the REST API
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: wilfredwake-orchestrator
+    image: wilfredwake:latest
+    environment:
+      - NODE_ENV=production
+      - ORCHESTRATOR_PORT=3000
+      - ORCHESTRATOR_HOST=0.0.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src/config/services.yaml:/app/src/config/services.yaml
+      - ./.env:/app/.env
+    command: node src/orchestrator/server.js
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    profiles:
+      - orchestrator
+      - default
+    networks:
+      - wilfredwake-network
+
+  # Development container with watch mode
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: wilfredwake-dev
+    image: wilfredwake:dev
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: node --experimental-watch bin/cli.js --help
+    profiles:
+      - dev
+
+networks:
+  wilfredwake-network:
+    driver: bridge

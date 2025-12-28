@@ -1,0 +1,29 @@
+# Lightweight orchestrator-only image
+FROM node:18-alpine
+
+WORKDIR /app
+
+LABEL maintainer="Wilfred Wake"
+LABEL description="Orchestrator API Server for wilfredwake"
+
+ENV NODE_ENV=production
+ENV ORCHESTRATOR_PORT=3000
+ENV ORCHESTRATOR_HOST=0.0.0.0
+ENV PATH="/app/node_modules/.bin:$PATH"
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code
+COPY src/ ./src/
+COPY .env* ./
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
+
+EXPOSE 3000
+
+ENTRYPOINT ["node"]
+CMD ["src/orchestrator/server.js"]
